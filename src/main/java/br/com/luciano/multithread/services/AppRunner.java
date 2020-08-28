@@ -7,10 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 @Component
 public class AppRunner implements CommandLineRunner {
@@ -27,19 +27,15 @@ public class AppRunner implements CommandLineRunner {
 
         long start = System.currentTimeMillis();
 
-        List<CompletableFuture<User>> list = new ArrayList<>();
-        names.forEach(s -> list.add(externalApiService.findUser(s)));
+        List<CompletableFuture<User>> list = names.stream().map(s -> this.externalApiService.findUser(s))
+                .collect(Collectors.toList());
 
+        //Espera que todos terminem
         CompletableFuture.allOf(list.toArray(new CompletableFuture[0])).join();
 
         logger.info("Elapsed time: " + (System.currentTimeMillis() - start));
 
-        list.forEach(f -> {
-            try {
-                logger.info("--> " + f.get());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
+        //Faz o processamento dos resultados pode usar CompletableFuture::get
+        list.stream().map(CompletableFuture::join).forEach(s -> logger.info("Result: " + s));
     }
 }
